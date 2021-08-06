@@ -260,6 +260,11 @@ modify
         .type = str
       }
     }
+  reindex_to_abc
+    .help = Apply a reindexing operator
+    {
+      include scope dials.command_line.reindex.phil_scope
+    }
 }
 """
 
