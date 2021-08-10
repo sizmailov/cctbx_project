@@ -23,7 +23,7 @@ namespace simtbx { namespace Kokkos {
 namespace af = scitbx::af;
 
 struct packed_metrology{
-  packed_metrology(){/*printf("NO OPERATION")*/;};
+  packed_metrology() {/*printf("NO OPERATION")*/;};
   packed_metrology(dxtbx::model::Detector const &,dxtbx::model::Beam const &);
   packed_metrology(const simtbx::nanoBragg::nanoBragg& nB);
   void show() const;
@@ -37,12 +37,12 @@ struct packed_metrology{
 };
 
 struct kokkos_detector{
-  inline kokkos_detector(){printf("NO OPERATION, DEVICE NUMBER IS NEEDED");};
+  inline kokkos_detector() {printf("NO OPERATION, DEVICE NUMBER IS NEEDED");};
   kokkos_detector(const simtbx::nanoBragg::nanoBragg& nB);
   kokkos_detector(dxtbx::model::Detector const &, dxtbx::model::Beam const &);
   vector_double_t construct_detail(dxtbx::model::Detector const &);
 
-  inline void show_summary(){
+  inline void show_summary() {
     std::cout << "Detector size: " << m_panel_count << " panel" << ( (m_panel_count>1)? "s" : "" ) << std::endl;
     metrology.show();
   }

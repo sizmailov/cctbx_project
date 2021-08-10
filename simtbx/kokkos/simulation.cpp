@@ -24,30 +24,30 @@ namespace Kokkos {
   // make a unit vector pointing in same direction and report magnitude (both args can be same vector)
   double cpu_unitize(const double * vector, double * new_unit_vector) {
 
-        double v1 = vector[1];
-        double v2 = vector[2];
-        double v3 = vector[3];
+    double v1 = vector[1];
+    double v2 = vector[2];
+    double v3 = vector[3];
 
-        double mag = sqrt(v1 * v1 + v2 * v2 + v3 * v3);
+    double mag = sqrt(v1 * v1 + v2 * v2 + v3 * v3);
 
-        if (mag != 0.0) {
-                // normalize it
-                new_unit_vector[0] = mag;
-                new_unit_vector[1] = v1 / mag;
-                new_unit_vector[2] = v2 / mag;
-                new_unit_vector[3] = v3 / mag;
-        } else {
-                // can't normalize, report zero vector
-                new_unit_vector[0] = 0.0;
-                new_unit_vector[1] = 0.0;
-                new_unit_vector[2] = 0.0;
-                new_unit_vector[3] = 0.0;
-        }
-        return mag;
+    if (mag != 0.0) {
+      // normalize it
+      new_unit_vector[0] = mag;
+      new_unit_vector[1] = v1 / mag;
+      new_unit_vector[2] = v2 / mag;
+      new_unit_vector[3] = v3 / mag;
+    } else {
+      // can't normalize, report zero vector
+      new_unit_vector[0] = 0.0;
+      new_unit_vector[1] = 0.0;
+      new_unit_vector[2] = 0.0;
+      new_unit_vector[3] = 0.0;
+    }
+    return mag;
   }
 
   void
-  exascale_api::show(){
+  exascale_api::show() {
     SCITBX_EXAMINE(SIM.roi_xmin);
     SCITBX_EXAMINE(SIM.roi_xmax);
     SCITBX_EXAMINE(SIM.roi_ymin);
@@ -89,7 +89,7 @@ namespace Kokkos {
     int const& ichannel,
     simtbx::Kokkos::kokkos_energy_channels & kec,
     simtbx::Kokkos::kokkos_detector & kdt
-  ){/*
+  ) {/*
     // cudaSafeCall(cudaSetDevice(SIM.device_Id));
 
     // transfer source_I, source_lambda
@@ -112,7 +112,7 @@ namespace Kokkos {
     std::size_t panel_size = kdt.m_slow_dim_size * kdt.m_fast_dim_size;
 
     // the for loop around panels.  Offsets given.
-    for (std::size_t panel_id = 0; panel_id < kdt.m_panel_count; panel_id++){
+    for (std::size_t panel_id = 0; panel_id < kdt.m_panel_count; panel_id++) {
       // loop thru panels and increment the array ptrs
       nanoBraggSpotsCUDAKernel<<<numBlocks, threadsPerBlock>>>(
       kdt.m_slow_dim_size, kdt.m_fast_dim_size, SIM.roi_xmin,
@@ -159,13 +159,13 @@ namespace Kokkos {
     simtbx::Kokkos::kokkos_energy_channels & kec,
     simtbx::Kokkos::kokkos_detector & kdt,
     af::shared<bool> all_panel_mask
-  ){
+  ) {
 
     // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
     // coordinates for the active pixel list are absolute offsets into the detector array
     af::shared<int> active_pixel_list;
     const bool* jptr = all_panel_mask.begin();
-    for (int j=0; j < all_panel_mask.size(); ++j){
+    for (int j=0; j < all_panel_mask.size(); ++j) {
       if (jptr[j]) {
         active_pixel_list.push_back(j);
       }
@@ -182,7 +182,7 @@ namespace Kokkos {
     vector_cudareal_t current_channel_Fhkl = kec.d_channel_Fhkl[ichannel];
 
     // for call for all panels at the same time
-      debranch_maskall_CUDAKernel(
+    debranch_maskall_CUDAKernel(
       kdt.m_panel_count, kdt.m_slow_dim_size, kdt.m_fast_dim_size, active_pixel_list.size(),
       SIM.oversample, SIM.point_pixel,
       SIM.pixel_size, m_subpixel_size, m_steps,
@@ -219,52 +219,52 @@ namespace Kokkos {
   void
   exascale_api::add_background_cuda(simtbx::Kokkos::kokkos_detector & kdt) {
 
-        // transfer source_I, source_lambda
-        // the int arguments are for sizes of the arrays
-        int sources_count = SIM.sources;
-        transfer_double2kokkos(m_source_I, SIM.source_I, sources_count);
-        transfer_double2kokkos(m_source_lambda, SIM.source_lambda, sources_count);
+    // transfer source_I, source_lambda
+    // the int arguments are for sizes of the arrays
+    int sources_count = SIM.sources;
+    transfer_double2kokkos(m_source_I, SIM.source_I, sources_count);
+    transfer_double2kokkos(m_source_lambda, SIM.source_lambda, sources_count);
 
-        vector_cudareal_t stol_of("stol_of", SIM.stols);
-        transfer_X2kokkos(stol_of, SIM.stol_of, SIM.stols);
+    vector_cudareal_t stol_of("stol_of", SIM.stols);
+    transfer_X2kokkos(stol_of, SIM.stol_of, SIM.stols);
 
-        vector_cudareal_t Fbg_of("Fbg_of", SIM.stols);
-        transfer_X2kokkos(Fbg_of, SIM.Fbg_of, SIM.stols);
+    vector_cudareal_t Fbg_of("Fbg_of", SIM.stols);
+    transfer_X2kokkos(Fbg_of, SIM.Fbg_of, SIM.stols);
 
-        //  initialize the device memory within a kernel.
-        //  modify the arguments to initialize multipanel detector.
-        ::Kokkos::parallel_for("nanoBraggSpotsInit", kdt.m_panel_count * kdt.m_slow_dim_size * kdt.m_fast_dim_size, KOKKOS_LAMBDA (const int& j) {
-          kdt.m_floatimage(j) = 0;
-          kdt.m_omega_reduction(j) = 0;
-          kdt.m_max_I_x_reduction(j) = 0;
-          kdt.m_max_I_y_reduction(j) = 0;
-          kdt.m_rangemap(j) = false;
-        });
+    //  initialize the device memory within a kernel.
+    //  modify the arguments to initialize multipanel detector.
+    ::Kokkos::parallel_for("nanoBraggSpotsInit", kdt.m_panel_count * kdt.m_slow_dim_size * kdt.m_fast_dim_size, KOKKOS_LAMBDA (const int& j) {
+      kdt.m_floatimage(j) = 0;
+      kdt.m_omega_reduction(j) = 0;
+      kdt.m_max_I_x_reduction(j) = 0;
+      kdt.m_max_I_y_reduction(j) = 0;
+      kdt.m_rangemap(j) = false;
+    });
 
-        std::size_t panel_size = kdt.m_slow_dim_size * kdt.m_fast_dim_size;
+    std::size_t panel_size = kdt.m_slow_dim_size * kdt.m_fast_dim_size;
 
-        // the for loop around panels.  Offsets given.
-        for (std::size_t panel_id = 0; panel_id < kdt.m_panel_count; panel_id++) {
-          add_background(SIM.sources,
-          SIM.oversample,
-          SIM.pixel_size, kdt.m_slow_dim_size, kdt.m_fast_dim_size, SIM.detector_thicksteps,
-          SIM.detector_thickstep, SIM.detector_attnlen,
-          extract_subview(kdt.m_sdet_vector, panel_id, m_vector_length),
-          extract_subview(kdt.m_fdet_vector, panel_id, m_vector_length),
-          extract_subview(kdt.m_odet_vector, panel_id, m_vector_length),
-          extract_subview(kdt.m_pix0_vector, panel_id, m_vector_length),
-          kdt.metrology.dists[panel_id], SIM.point_pixel, SIM.detector_thick,
-          m_source_X, m_source_Y, m_source_Z,
-          m_source_lambda, m_source_I,
-          SIM.stols, stol_of, Fbg_of,
-          SIM.nopolar, SIM.polarization, m_polar_vector,
-          simtbx::nanoBragg::r_e_sqr, SIM.fluence, SIM.amorphous_molecules,
-          // returns:
-          extract_subview(kdt.m_floatimage, panel_id, panel_size));
-        }
+    // the for loop around panels.  Offsets given.
+    for (std::size_t panel_id = 0; panel_id < kdt.m_panel_count; panel_id++) {
+      add_background(SIM.sources,
+      SIM.oversample,
+      SIM.pixel_size, kdt.m_slow_dim_size, kdt.m_fast_dim_size, SIM.detector_thicksteps,
+      SIM.detector_thickstep, SIM.detector_attnlen,
+      extract_subview(kdt.m_sdet_vector, panel_id, m_vector_length),
+      extract_subview(kdt.m_fdet_vector, panel_id, m_vector_length),
+      extract_subview(kdt.m_odet_vector, panel_id, m_vector_length),
+      extract_subview(kdt.m_pix0_vector, panel_id, m_vector_length),
+      kdt.metrology.dists[panel_id], SIM.point_pixel, SIM.detector_thick,
+      m_source_X, m_source_Y, m_source_Z,
+      m_source_lambda, m_source_I,
+      SIM.stols, stol_of, Fbg_of,
+      SIM.nopolar, SIM.polarization, m_polar_vector,
+      simtbx::nanoBragg::r_e_sqr, SIM.fluence, SIM.amorphous_molecules,
+      // returns:
+      extract_subview(kdt.m_floatimage, panel_id, panel_size));
+    }
 
-        ::Kokkos::fence();
-        add_array(kdt.m_accumulate_floatimage, kdt.m_floatimage);
+    ::Kokkos::fence();
+    add_array(kdt.m_accumulate_floatimage, kdt.m_floatimage);
   }
 
   void

@@ -19,10 +19,10 @@ using Kokkos::parallel_for;
 namespace simtbx { namespace Kokkos {
 
   packed_metrology::packed_metrology(dxtbx::model::Detector const & arg_detector,
-                                   dxtbx::model::Beam const & arg_beam) {
+                                     dxtbx::model::Beam const & arg_beam) {
 
-    for (std::size_t panel_id = 0; panel_id < arg_detector.size(); panel_id++){
-          // helper code arising from the nanoBragg constructor, with user_beam=True
+    for (std::size_t panel_id = 0; panel_id < arg_detector.size(); panel_id++) {
+      // helper code arising from the nanoBragg constructor, with user_beam=True
       typedef scitbx::vec3<double> vec3;
 
       // DETECTOR properties
@@ -43,9 +43,9 @@ namespace simtbx { namespace Kokkos {
 
       // what is the point of closest approach between sample and detector?
       double close_distance = pix0_vector * odet_vector;
-      if (close_distance < 0){
+      if (close_distance < 0) {
         bool verbose = false;
-        if(verbose)printf("WARNING: dxtbx model is lefthanded. Inverting odet_vector.\n");
+        if (verbose) { printf("WARNING: dxtbx model is lefthanded. Inverting odet_vector.\n"); }
         odet_vector = -1. * odet_vector;
         close_distance = -1*close_distance;
       }
@@ -54,11 +54,11 @@ namespace simtbx { namespace Kokkos {
       fdet.push_back(fdet_vector.length());
       odet.push_back(odet_vector.length());
       pix0.push_back(0.);
-      for (std::size_t idx_vec = 0; idx_vec < 3; idx_vec++){
-            sdet.push_back(sdet_vector[idx_vec]);
-            fdet.push_back(fdet_vector[idx_vec]);
-            odet.push_back(odet_vector[idx_vec]);
-            pix0.push_back(pix0_vector[idx_vec]);
+      for (std::size_t idx_vec = 0; idx_vec < 3; idx_vec++) {
+        sdet.push_back(sdet_vector[idx_vec]);
+        fdet.push_back(fdet_vector[idx_vec]);
+        odet.push_back(odet_vector[idx_vec]);
+        pix0.push_back(pix0_vector[idx_vec]);
       }
       // set beam centre
       scitbx::vec2<double> dials_bc=arg_detector[panel_id].get_beam_centre(arg_beam.get_s0());
@@ -68,21 +68,21 @@ namespace simtbx { namespace Kokkos {
     }
   };
 
-  packed_metrology::packed_metrology(const simtbx::nanoBragg::nanoBragg& nB){
-      for (std::size_t idx_vec = 0; idx_vec < 4; idx_vec++){
-            sdet.push_back(nB.sdet_vector[idx_vec]);
-            fdet.push_back(nB.fdet_vector[idx_vec]);
-            odet.push_back(nB.odet_vector[idx_vec]);
-            pix0.push_back(nB.pix0_vector[idx_vec]);
-      }
-      dists.push_back(nB.close_distance);
-      Xbeam.push_back(nB.Xbeam);
-      Ybeam.push_back(nB.Ybeam);
+  packed_metrology::packed_metrology(const simtbx::nanoBragg::nanoBragg& nB) {
+    for (std::size_t idx_vec = 0; idx_vec < 4; idx_vec++) {
+      sdet.push_back(nB.sdet_vector[idx_vec]);
+      fdet.push_back(nB.fdet_vector[idx_vec]);
+      odet.push_back(nB.odet_vector[idx_vec]);
+      pix0.push_back(nB.pix0_vector[idx_vec]);
+    }
+    dists.push_back(nB.close_distance);
+    Xbeam.push_back(nB.Xbeam);
+    Ybeam.push_back(nB.Ybeam);
   }
 
   void
   packed_metrology::show() const {
-    for (std::size_t idx_p = 0; idx_p < Xbeam.size(); idx_p++){
+    for (std::size_t idx_p = 0; idx_p < Xbeam.size(); idx_p++) {
       printf(" Panel %3d\n",idx_p);
       printf(" Panel %3d sdet %9.6f %9.6f %9.6f %9.6f fdet %9.6f %9.6f %9.6f %9.6f\n",
              idx_p,sdet[4*idx_p+0],sdet[4*idx_p+1],sdet[4*idx_p+2],sdet[4*idx_p+3],
@@ -103,7 +103,7 @@ namespace simtbx { namespace Kokkos {
     SCITBX_ASSERT( m_panel_count >= 1 );
 
     //2) confirm that array dimensions are similar for each size
-    for (int ipanel=1; ipanel < arg_detector.size(); ++ipanel){
+    for (int ipanel=1; ipanel < arg_detector.size(); ++ipanel) {
       SCITBX_ASSERT( arg_detector[ipanel].get_image_size()[0] == m_slow_dim_size );
       SCITBX_ASSERT( arg_detector[ipanel].get_image_size()[1] == m_fast_dim_size );
     }
@@ -117,7 +117,7 @@ namespace simtbx { namespace Kokkos {
   };
 
   kokkos_detector::kokkos_detector(dxtbx::model::Detector const & arg_detector,
-                             dxtbx::model::Beam const& arg_beam):
+                                   dxtbx::model::Beam const& arg_beam):
     metrology(arg_detector, arg_beam),
     m_panel_count( arg_detector.size() ),
     m_slow_dim_size( arg_detector[0].get_image_size()[0] ),
@@ -134,7 +134,7 @@ namespace simtbx { namespace Kokkos {
     m_accumulate_floatimage( vector_double_t( "m_accumulate_floatimage", m_total_pixel_count) ) { }
 
   void
-  kokkos_detector::scale_in_place_cuda(const double& factor){
+  kokkos_detector::scale_in_place_cuda(const double& factor) {
     auto local_accumulate_floatimage = m_accumulate_floatimage;
     parallel_for("scale_in_place", range_policy(0,m_total_pixel_count), KOKKOS_LAMBDA (const int i) {
       local_accumulate_floatimage( i ) = local_accumulate_floatimage( i ) * factor;
@@ -153,7 +153,7 @@ namespace simtbx { namespace Kokkos {
   }
 
   af::flex_double
-  kokkos_detector::get_raw_pixels_cuda(){
+  kokkos_detector::get_raw_pixels_cuda() {
     //return the data array for the multipanel detector case
     af::flex_double output_array(af::flex_grid<>(m_panel_count,m_slow_dim_size,m_fast_dim_size), af::init_functor_null<double>());
     double* output_array_ptr = output_array.begin();
