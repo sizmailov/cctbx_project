@@ -110,8 +110,6 @@ void debranch_maskall_CUDAKernel(int npanels, int spixels, int fpixels, int tota
                                 // absolute mm position on detector (relative to its origin)
                                 CUDAREAL Fdet = subpixel_size * (fpixel * oversample + subF) + subpixel_size / 2.0; // X voxel
                                 CUDAREAL Sdet = subpixel_size * (spixel * oversample + subS) + subpixel_size / 2.0; // Y voxel
-                                // Fdet = pixel_size*fpixel;
-                                // Sdet = pixel_size*spixel;
 
                                 max_I_x_sub_reduction = Fdet;
                                 max_I_y_sub_reduction = Sdet;
@@ -142,7 +140,6 @@ void debranch_maskall_CUDAKernel(int npanels, int spixels, int fpixels, int tota
                                                             + pix0_vector(iVL+3); // Z
 
                                         // construct the diffracted-beam unit vector to this sub-pixel
-                                        //CUDAREAL * diffracted = tmpVector2;
                                         CUDAREAL diffracted[4];
                                         CUDAREAL airpath = unitize(pixel_pos, diffracted);
 
@@ -267,7 +264,6 @@ void debranch_maskall_CUDAKernel(int npanels, int spixels, int fpixels, int tota
 
                                                                 // structure factor of the unit cell
                                                                 CUDAREAL F_cell = default_F;
-                                                                //F_cell = quickFcell_ldg(s_hkls, s_h_max, s_h_min, s_k_max, s_k_min, s_l_max, s_l_min, h0, k0, l0, s_h_range, s_k_range, s_l_range, default_F, Fhkl);
                                                                 if (
                                                                         h0 < s_h_min ||
                                                                         k0 < s_k_min ||
@@ -345,9 +341,6 @@ void add_background(int sources, int nanoBragg_oversample,
 
     // sweep over detector
     const int total_pixels = spixels * fpixels;
-    // const int fstride = gridDim.x * blockDim.x;
-    // const int sstride = gridDim.y * blockDim.y;
-    // const int stride = fstride * sstride;
     Kokkos::parallel_for("add_background", total_pixels, KOKKOS_LAMBDA(const int& pixIdx) {
 
         const int fpixel = pixIdx % fpixels;

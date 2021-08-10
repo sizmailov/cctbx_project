@@ -62,19 +62,11 @@ namespace simtbx { namespace Kokkos {
   template <typename T>
   void
   transfer_shared2kokkos(view_1d_t<T> &dst, const af::shared<T>  &src) {
-    if (true) {
-      // printf("== Transfer %s from %p\n", dst.label().c_str(), (void*) dst.data());
-      // printf(" - size src|dst: %d|%d\n", src.size(), dst.span() );
-    }
     if (dst.span() < src.size()) {
       resize(dst, src.size());
-      // printf(" - size changed, new size: %d\n", dst.span() );
     }
 
     transfer_X2kokkos(dst, src);
-    if (src.size() < 20) {
-      // print_view(dst);
-    }
   }
 
   void transfer_double2kokkos(vector_cudareal_t &dst, const double *src, const size_t length);
@@ -82,27 +74,18 @@ namespace simtbx { namespace Kokkos {
   template <typename T>
   void
   transfer_kokkos2shared(af::shared<T> &dst, const view_1d_t<T> &src) {
-    if (true) {
-      // printf("== Transfer %s from %p\n", src.label().c_str(), (void*) src.data());
-    }
     transfer_kokkos2X(dst, src);
   }
 
   template <typename T>
   void
   transfer_kokkos2flex(af::flex_double &dst, const view_1d_t<T> &src) {
-    if (true) {
-      // printf("== Transfer %s from %p\n", src.label().c_str(), (void*) src.data());
-    }
     transfer_kokkos2X(dst, src);
   }
 
   template <typename T>
   void
   transfer_kokkos2flex(af::flex_int &dst, const view_1d_t<T> &src) {
-    if (true) {
-      // printf("== Transfer %s from %p\n", src.label().c_str(), (void*) src.data());
-    }
     transfer_kokkos2X(dst, src);
   }
 

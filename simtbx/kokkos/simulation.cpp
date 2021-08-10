@@ -14,15 +14,6 @@ namespace Kokkos {
 
   namespace af = scitbx::af;
   //refactor later into helper file
-/*  static cudaError_t cudaMemcpyVectorDoubleToDevice(CUDAREAL *dst, const double *src, size_t vector_items) {
-        CUDAREAL * temp = new CUDAREAL[vector_items];
-        for (size_t i = 0; i < vector_items; i++) {
-                temp[i] = src[i];
-        }
-        cudaError_t ret = cudaMemcpy(dst, temp, sizeof(*dst) * vector_items, cudaMemcpyHostToDevice);
-        delete temp;
-        return ret;
-  }*/
 
   // extract subview from [start_index * length; (start_index + 1) * length)
   template <typename T>
@@ -169,7 +160,6 @@ namespace Kokkos {
     simtbx::Kokkos::kokkos_detector & kdt,
     af::shared<bool> all_panel_mask
   ){
-    // cudaSafeCall(cudaSetDevice(SIM.device_Id));
 
     // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
     // coordinates for the active pixel list are absolute offsets into the detector array
@@ -187,20 +177,11 @@ namespace Kokkos {
     int source_count = SIM.sources;
     transfer_double2kokkos(m_source_I, SIM.source_I, source_count);
     transfer_double2kokkos(m_source_lambda, SIM.source_lambda, source_count);
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(m_source_I, SIM.source_I, SIM.sources));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(m_source_lambda, SIM.source_lambda, SIM.sources));
 
     // magic happens here: take pointer from singleton, temporarily use it for add Bragg iteration:
     vector_cudareal_t current_channel_Fhkl = kec.d_channel_Fhkl[ichannel];
 
-    // cudaDeviceProp deviceProps = { 0 };
-    // cudaSafeCall(cudaGetDeviceProperties(&deviceProps, SIM.device_Id));
-    // int smCount = deviceProps.multiProcessorCount;
-    // dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
-    // dim3 numBlocks(smCount * 8, 1);
-
     // for call for all panels at the same time
-
       debranch_maskall_CUDAKernel(
       kdt.m_panel_count, kdt.m_slow_dim_size, kdt.m_fast_dim_size, active_pixel_list.size(),
       SIM.oversample, SIM.point_pixel,
@@ -231,45 +212,24 @@ namespace Kokkos {
       kdt.m_max_I_y_reduction,
       kdt.m_rangemap);
 
-    // cudaSafeCall(cudaPeekAtLastError());
-    // cudaSafeCall(cudaDeviceSynchronize());
-
-    //don't want to free the kec data when the nanoBragg goes out of scope, so switch the pointer
-    // cu_current_channel_Fhkl = NULL;
-
     add_array(kdt.m_accumulate_floatimage, kdt.m_floatimage);
   }
 
 
   void
   exascale_api::add_background_cuda(simtbx::Kokkos::kokkos_detector & kdt) {
-        // cudaSafeCall(cudaSetDevice(SIM.device_Id));
 
         // transfer source_I, source_lambda
         // the int arguments are for sizes of the arrays
         int sources_count = SIM.sources;
         transfer_double2kokkos(m_source_I, SIM.source_I, sources_count);
         transfer_double2kokkos(m_source_lambda, SIM.source_lambda, sources_count);
-        // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(m_source_I, SIM.source_I, SIM.sources));
-        // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(m_source_lambda, SIM.source_lambda, SIM.sources));
 
         vector_cudareal_t stol_of("stol_of", SIM.stols);
         transfer_X2kokkos(stol_of, SIM.stol_of, SIM.stols);
-        // CUDAREAL * cu_stol_of;
-        // cudaSafeCall(cudaMalloc((void ** )&cu_stol_of, sizeof(*cu_stol_of) * SIM.stols));
-        // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_stol_of, SIM.stol_of, SIM.stols));
 
         vector_cudareal_t Fbg_of("Fbg_of", SIM.stols);
         transfer_X2kokkos(Fbg_of, SIM.Fbg_of, SIM.stols);
-        // CUDAREAL * cu_Fbg_of;
-        // cudaSafeCall(cudaMalloc((void ** )&cu_Fbg_of, sizeof(*cu_Fbg_of) * SIM.stols));
-        // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_Fbg_of, SIM.Fbg_of, SIM.stols));
-
-        // cudaDeviceProp deviceProps = { 0 };
-        // cudaSafeCall(cudaGetDeviceProperties(&deviceProps, SIM.device_Id));
-        // int smCount = deviceProps.multiProcessorCount;
-        // dim3 threadsPerBlock(THREADS_PER_BLOCK_X, THREADS_PER_BLOCK_Y);
-        // dim3 numBlocks(smCount * 8, 1);
 
         //  initialize the device memory within a kernel.
         //  modify the arguments to initialize multipanel detector.
@@ -280,13 +240,6 @@ namespace Kokkos {
           kdt.m_max_I_y_reduction(j) = 0;
           kdt.m_rangemap(j) = false;
         });
-        // nanoBraggSpotsInitCUDAKernel<<<numBlocks, threadsPerBlock>>>(
-        //   kdt.m_panel_count * kdt.m_slow_dim_size, kdt.m_fast_dim_size,
-        //   kdt.cu_floatimage, kdt.cu_omega_reduction,
-        //   kdt.cu_max_I_x_reduction, kdt.cu_max_I_y_reduction,
-        //   kdt.cu_rangemap);
-        // cudaSafeCall(cudaPeekAtLastError());
-        // cudaSafeCall(cudaDeviceSynchronize());
 
         std::size_t panel_size = kdt.m_slow_dim_size * kdt.m_fast_dim_size;
 
@@ -308,20 +261,14 @@ namespace Kokkos {
           simtbx::nanoBragg::r_e_sqr, SIM.fluence, SIM.amorphous_molecules,
           // returns:
           extract_subview(kdt.m_floatimage, panel_id, panel_size));
-
-          // cudaSafeCall(cudaPeekAtLastError());
         }
-        // cudaSafeCall(cudaDeviceSynchronize());
+
         ::Kokkos::fence();
         add_array(kdt.m_accumulate_floatimage, kdt.m_floatimage);
-
-        // cudaSafeCall(cudaFree(cu_stol_of));
-        // cudaSafeCall(cudaFree(cu_Fbg_of));
   }
 
   void
   exascale_api::allocate_cuda() {
-    //cudaSafeCall(cudaSetDevice(SIM.device_Id));
 
     // water_size not defined in class, CLI argument, defaults to 0
     double water_size = 0.0;
@@ -347,28 +294,11 @@ namespace Kokkos {
     m_water_F = water_F;
     m_water_MW = water_MW;
 
-    //const int vector_length = 4;
-
     transfer_double2kokkos(m_beam_vector, SIM.beam_vector, m_vector_length);
     transfer_double2kokkos(m_spindle_vector, SIM.spindle_vector, m_vector_length);
     transfer_double2kokkos(m_a0, SIM.a0, m_vector_length);
     transfer_double2kokkos(m_b0, SIM.b0, m_vector_length);
     transfer_double2kokkos(m_c0, SIM.c0, m_vector_length);
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_beam_vector, sizeof(*cu_beam_vector) * vector_length));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_beam_vector, SIM.beam_vector, vector_length));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_spindle_vector, sizeof(*cu_spindle_vector) * vector_length));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_spindle_vector, SIM.spindle_vector, vector_length));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_a0, sizeof(*cu_a0) * vector_length));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_a0, SIM.a0, vector_length));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_b0, sizeof(*cu_b0) * vector_length));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_b0, SIM.b0, vector_length));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_c0, sizeof(*cu_c0) * vector_length));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_c0, SIM.c0, vector_length));
 
     // Unitize polar vector before sending it to the GPU.
     // Optimization do it only once here rather than multiple time per pixel in the GPU.
@@ -385,46 +315,7 @@ namespace Kokkos {
 
     int mosaic_domains_count = SIM.mosaic_domains;
     transfer_double2kokkos(m_mosaic_umats, SIM.mosaic_umats, mosaic_domains_count * 9);
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_polar_vector, sizeof(*cu_polar_vector) * vector_length));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_polar_vector, polar_vector_unitized, vector_length));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_source_X, sizeof(*cu_source_X) * sources_count));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_X, SIM.source_X, sources_count));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_source_Y, sizeof(*cu_source_Y) * sources_count));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_Y, SIM.source_Y, sources_count));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_source_Z, sizeof(*cu_source_Z) * sources_count));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_Z, SIM.source_Z, sources_count));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_source_I, sizeof(*cu_source_I) * sources_count));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_I, SIM.source_I, sources_count));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_source_lambda, sizeof(*cu_source_lambda) * sources_count));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_lambda, SIM.source_lambda, sources_count));
-
-    // cudaSafeCall(cudaMalloc((void ** )&cu_mosaic_umats, sizeof(*cu_mosaic_umats) * mosaic_domains_count * 9));
-    // cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_mosaic_umats, SIM.mosaic_umats, mosaic_domains_count * 9));
   };
-
-/*  exascale_api::~exascale_api(){
-    cudaSafeCall(cudaSetDevice(SIM.device_Id));
-
-        cudaSafeCall(cudaFree(cu_beam_vector));
-        cudaSafeCall(cudaFree(cu_spindle_vector));
-        cudaSafeCall(cudaFree(cu_source_X));
-        cudaSafeCall(cudaFree(cu_source_Y));
-        cudaSafeCall(cudaFree(cu_source_Z));
-        cudaSafeCall(cudaFree(cu_source_I));
-        cudaSafeCall(cudaFree(cu_source_lambda));
-        cudaSafeCall(cudaFree(cu_a0));
-        cudaSafeCall(cudaFree(cu_b0));
-        cudaSafeCall(cudaFree(cu_c0));
-        cudaSafeCall(cudaFree(cu_mosaic_umats));
-        cudaSafeCall(cudaFree(cu_polar_vector));
-  }
-*/
 
 } // Kokkos
 } // simtbx

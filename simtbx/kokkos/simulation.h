@@ -27,7 +27,6 @@ struct exascale_api {
   );
   void add_background_cuda(simtbx::Kokkos::kokkos_detector &);
   void allocate_cuda();
-  //~exascale_api();
 
   const simtbx::nanoBragg::nanoBragg& SIM;
 

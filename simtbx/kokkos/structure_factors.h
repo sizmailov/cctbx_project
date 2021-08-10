@@ -17,7 +17,6 @@ typedef af::shared<miller_t > indices;
 
 struct kokkos_energy_channels {
   kokkos_energy_channels(){};
-  //kokkos_energy_channels(int const&);
 
   inline
   void structure_factors_to_KOKKOS_direct_cuda(
@@ -73,17 +72,13 @@ struct kokkos_energy_channels {
   void structure_factors_to_KOKKOS_detail(af::shared<double>);
   void print_Fhkl(int channel, int first_element, int last_element);
 
-
-  //inline int get_deviceID(){return h_deviceID;}
   inline int get_nchannels(){return d_channel_Fhkl.size();}
   void free_detail();
-  //inline ~kokkos_energy_channels(){ if (d_channel_Fhkl.size() > 0) {free_detail();} }
 
     double F000 = 0.0;        // to mark beam center
     double default_F = 0.0;
     int verbose = 0;
     int h_range,k_range,l_range,h_min,h_max,k_min,k_max,l_min,l_max;
-    //int h_deviceID;
 
   /* pointers to data on device */
   af::shared<vector_cudareal_t> d_channel_Fhkl;

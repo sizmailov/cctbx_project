@@ -53,7 +53,6 @@ struct kokkos_detector{
   void set_active_pixels_on_KOKKOS(af::shared<int>);
   af::shared<double> get_whitelist_raw_pixels_cuda(af::shared<std::size_t>);
 
-  //const dxtbx::model::Detector detector;
   packed_metrology const metrology;
 
   // detector size and dimensions in pixels

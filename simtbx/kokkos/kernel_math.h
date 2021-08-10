@@ -36,9 +36,6 @@ KOKKOS_FUNCTION void polint(const CUDAREAL *xa, const CUDAREAL *ya, CUDAREAL x, 
 KOKKOS_FUNCTION CUDAREAL dot_product(const CUDAREAL *x, const CUDAREAL *y) {
         return x[1] * y[1] + x[2] * y[2] + x[3] * y[3];
 }
-// KOKKOS_INLINE_FUNCTION CUDAREAL dot_product_ldg(const CUDAREAL * __restrict__ x, CUDAREAL * y) {
-//         return __ldg(&x[1]) * y[1] + __ldg(&x[2]) * y[2] + __ldg(&x[3]) * y[3];
-// }
 
 // make provided vector a unit vector
 KOKKOS_FUNCTION CUDAREAL unitize(CUDAREAL * vector, CUDAREAL * new_unit_vector) {
