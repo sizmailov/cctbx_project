@@ -6,11 +6,28 @@ from dials.util import show_mail_on_error
 from dials.util.options import OptionParser
 from cctbx import uctbx, miller, crystal
 import sys
-import GSASIIindex as gi
 from libtbx import easy_mp
 from cctbx.uctbx import d_as_d_star_sq, d_star_sq_as_two_theta
-from cctbx import miller, crystal
+from cctbx import miller, crystal, sgtbx, uctbx
 import functools
+
+conda_message = """
+GSASII is required and must be installed manually. As of 8/12/2021, the
+following steps worked on a build created by the "General build" instructions
+here: https://github.com/cctbx/cctbx_project/tree/master/xfel/conda_envs
+
+  $ conda install gsas2pkg -c briantoby -c conda-forge
+  $ cd $DIALS/conda_base
+  $ echo $PWD/GSASII > lib/python3.7/site-packages/GSASII.pth
+
+where DIALS is the base directory of the installation.
+"""
+
+try:
+  import GSASIIindex as gi
+except ImportError:
+  print(conda_message)
+  exit()
 
 help_message = """
 Script to generate candidate unit cells from a list of measured d-spacings
@@ -25,6 +42,7 @@ cells. Candidates are ranked by their agreement with the peak list and, if
 available, a full powder pattern. These peaks and powder pattern may be prepared
 conveniently using cctbx.xfel.powder_from_spots.
 """
+
 
 phil_scope = parse(
     """
@@ -179,6 +197,14 @@ def call_gsas(args):
   '''
   '''
 
+  def _make_cctbx_args(sg_string):
+    return {
+        'sg_type': sgtbx.space_group_type(sg_string),
+        'uctbx_unit_cell': uctbx.unit_cell,
+        'miller_index_generator': miller.index_generator
+        }
+
+
   symmorphic_sgs = ['F23', 'I23', 'P23', 'R3', 'P3', 'I4', 'P4', 'F222', 'I222',
       'A222', 'B222', 'C222', 'P222', 'I2', 'C2', 'P2', 'P1']
   lattices = ['cF', 'cI', 'cP', 'hR', 'hP', 'tI', 'tP', 'oF', 'oI', 'oA', 'oB',
@@ -194,13 +220,17 @@ def call_gsas(args):
   x20_max = params.search.x20_max
 
   i_bravais = lattices.index(bravais)
+  sg_string = symmorphic_sgs[i_bravais]
   bravais_list = [i==i_bravais for i in range(17)]
+
+  cctbx_args = _make_cctbx_args(sg_string)
 
   #TODO: adaptively set starting volume controls[3] based on number of peaks
   controls = [0, 0.0, 4, 200, 0, 'P1', 1.0, 1.0, 1.0, 90.0, 90.0, 90.0, 1.0,
       'P 1', []]
 
   trial_gpeaks = prepare_gpeaks(d_spacings, wavl)
+
 
   try:
     success, dmin, gcells = gi.DoIndexPeaks(
@@ -211,7 +241,8 @@ def call_gsas(args):
         timeout=timeout,
         M20_min=m20_min,
         X20_max=x20_max,
-        return_Nc=True)
+        return_Nc=True,
+        cctbx_args=cctbx_args)
   except FloatingPointError: #this raises "invalid value encountered in double_scalars" sometimes
     print("############################################################\n"*10,
         "crash in search for {}".format(bravais))
@@ -280,8 +311,6 @@ class Script(object):
          )
         
   def run(self):
-
-    print("TODO: print the GSASII license message")
 
     params, options = self.parser.parse_args()
 
