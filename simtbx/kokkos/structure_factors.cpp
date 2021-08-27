@@ -12,6 +12,7 @@ namespace simtbx { namespace Kokkos {
 
   void
   kokkos_energy_channels::structure_factors_to_KOKKOS_detail(af::shared<double> linear_amplitudes) {
+    ::Kokkos::Profiling::pushRegion("EnergyChannels - Factors2KokkosDetail");
     double * raw_ptr = linear_amplitudes.begin();
 
     vector_cudareal_t device_Fhkl( "device_Fhkl", linear_amplitudes.size() );
@@ -24,6 +25,7 @@ namespace simtbx { namespace Kokkos {
                           k_min, k_max, k_range,
                           l_min, l_max, l_range };
     }
+    ::Kokkos::Profiling::popRegion();
   }
 
   void

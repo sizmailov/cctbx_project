@@ -83,7 +83,7 @@ void debranch_maskall_CUDAKernel(int npanels, int spixels, int fpixels, int tota
   CUDAREAL F_bg = water_F;
   CUDAREAL I_bg = F_bg * F_bg * r_e_sqr * fluence * water_size * water_size * water_size * 1e6 * Avogadro / water_MW;
 
-  Kokkos::parallel_for("add_background", total_pixels, KOKKOS_LAMBDA(const int& pixIdx) {
+  Kokkos::parallel_for("debranch_maskall", total_pixels, KOKKOS_LAMBDA(const int& pixIdx) {
     // position in pixel array
     const int j = pixel_lookup(pixIdx);//pixIdx: index into pixel subset; j: index into the data.
     const int i_panel = j / (fpixels*spixels); // the panel number

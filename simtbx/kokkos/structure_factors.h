@@ -21,6 +21,7 @@ struct kokkos_energy_channels {
   inline
   void structure_factors_to_KOKKOS_direct_cuda(
     int, indices pythony_indices, af::shared<double> pythony_amplitudes) {
+    ::Kokkos::Profiling::pushRegion("EnergyChannels - Factors2Kokkos");
     double F_cell;
 
     // load the structure factors
@@ -68,6 +69,8 @@ struct kokkos_energy_channels {
       raw_ptr[-h_min * k_range * l_range -k_min * l_range -l_min] = F000;
     }
     structure_factors_to_KOKKOS_detail(linear_amplitudes);
+
+    ::Kokkos::Profiling::popRegion();
   }
   void structure_factors_to_KOKKOS_detail(af::shared<double>);
   void print_Fhkl(int channel, int first_element, int last_element);

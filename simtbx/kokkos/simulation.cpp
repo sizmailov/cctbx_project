@@ -160,6 +160,7 @@ namespace Kokkos {
     simtbx::Kokkos::kokkos_detector & kdt,
     af::shared<bool> all_panel_mask
   ) {
+    ::Kokkos::Profiling::pushRegion("Simulation - AddEnergyChannel");
 
     // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
     // coordinates for the active pixel list are absolute offsets into the detector array
@@ -213,11 +214,14 @@ namespace Kokkos {
       kdt.m_rangemap);
 
     add_array(kdt.m_accumulate_floatimage, kdt.m_floatimage);
+
+    ::Kokkos::Profiling::popRegion();
   }
 
 
   void
   exascale_api::add_background_cuda(simtbx::Kokkos::kokkos_detector & kdt) {
+    ::Kokkos::Profiling::pushRegion("Simulation - AddBackground");
 
     // transfer source_I, source_lambda
     // the int arguments are for sizes of the arrays
@@ -265,10 +269,13 @@ namespace Kokkos {
 
     ::Kokkos::fence();
     add_array(kdt.m_accumulate_floatimage, kdt.m_floatimage);
+
+    ::Kokkos::Profiling::popRegion();
   }
 
   void
   exascale_api::allocate_cuda() {
+    ::Kokkos::Profiling::pushRegion("Simulation - AllocateCUDA");
 
     // water_size not defined in class, CLI argument, defaults to 0
     double water_size = 0.0;
@@ -315,6 +322,8 @@ namespace Kokkos {
 
     int mosaic_domains_count = SIM.mosaic_domains;
     transfer_double2kokkos(m_mosaic_umats, SIM.mosaic_umats, mosaic_domains_count * 9);
+
+    ::Kokkos::Profiling::popRegion();
   };
 
 } // Kokkos

@@ -172,6 +172,7 @@ namespace simtbx { namespace Kokkos {
 
   af::shared<double>
   kokkos_detector::get_whitelist_raw_pixels_cuda(af::shared<std::size_t> selection) {
+    ::Kokkos::Profiling::pushRegion("Detector - GetWhitelistRaw");
     //return the data array for the multipanel detector case, but only for whitelist pixels
     //ToDo check if this function works as intended. It seems like active_pixel is unnecessary or wrong
     vector_size_t active_pixel_selection = vector_size_t("active_pixel_selection", selection.size());
@@ -189,11 +190,13 @@ namespace simtbx { namespace Kokkos {
     af::shared<double> output_array(m_active_pixel_size, af::init_functor_null<double>());
     transfer_kokkos2shared(output_array, active_pixel_results);
 
+    ::Kokkos::Profiling::popRegion();
     return output_array;
   }
 
   void
   kokkos_detector::each_image_allocate_cuda() {
+    ::Kokkos::Profiling::pushRegion("Detector - EachImageAllocate");
     resize(m_rangemap, m_total_pixel_count);
     resize(m_omega_reduction, m_total_pixel_count);
     resize(m_max_I_x_reduction, m_total_pixel_count);
@@ -210,6 +213,8 @@ namespace simtbx { namespace Kokkos {
     transfer_shared2kokkos(m_Xbeam, metrology.Xbeam);
     transfer_shared2kokkos(m_Ybeam, metrology.Ybeam);
     fence();
+
+    ::Kokkos::Profiling::popRegion();
   }
 
 } // Kokkos

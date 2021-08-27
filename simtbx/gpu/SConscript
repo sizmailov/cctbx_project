@@ -43,6 +43,10 @@ if (env_etc.enable_cuda):
   env_bpl.Prepend(CPPPATH=[env_etc.boost_adaptbx_include,
     env_etc.boost_include])
 
+  # Add library for Profiling
+  env_bpl.Append(LIBPATH=[os.path.join(os.environ['CUDA_HOME'], 'lib64')])
+  env_bpl.Append(LIBS=['nvToolsExt'])
+
   cuda_lib = env_bpl.cudaSharedLibrary(
     target = "#lib/libsimtbx_gpu",
     source = cuda_src)

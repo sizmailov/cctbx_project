@@ -3,6 +3,7 @@
 #include <simtbx/gpu/simulation.h>
 #include <simtbx/gpu/simulation.cuh>
 #include <scitbx/array_family/flex_types.h>
+#include <nvToolsExt.h> 
 #define THREADS_PER_BLOCK_X 128
 #define THREADS_PER_BLOCK_Y 1
 #define THREADS_PER_BLOCK_TOTAL (THREADS_PER_BLOCK_X * THREADS_PER_BLOCK_Y)
@@ -160,6 +161,7 @@ namespace af = scitbx::af;
     simtbx::gpu::gpu_detector & gdt,
     af::shared<bool> all_panel_mask
   ){
+        nvtxRangePush("Simulation - AddEnergyChannel");
         // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
         // coordinates for the active pixel list are absolute offsets into the detector array
         af::shared<int> active_pixel_list;
@@ -171,6 +173,7 @@ namespace af = scitbx::af;
         }
         add_energy_channel_mask_allpanel_cuda(
           ichannel, gec, gdt, active_pixel_list);
+        nvtxRangePop();
   }
 
   void
@@ -244,6 +247,7 @@ namespace af = scitbx::af;
 
   void
   exascale_api::add_background_cuda(simtbx::gpu::gpu_detector & gdt, int const& override_source){
+        nvtxRangePush("Simulation - AddBackground");
         cudaSafeCall(cudaSetDevice(SIM.device_Id));
 
         // transfer source_I, source_lambda
@@ -305,10 +309,12 @@ namespace af = scitbx::af;
 
         cudaSafeCall(cudaFree(cu_stol_of));
         cudaSafeCall(cudaFree(cu_Fbg_of));
+        nvtxRangePop();
 }
 
   void
   exascale_api::allocate_cuda(){
+    nvtxRangePush("Simulation - AllocateCuda");
     cudaSafeCall(cudaSetDevice(SIM.device_Id));
 
     /* water_size not defined in class, CLI argument, defaults to 0 */
@@ -378,6 +384,7 @@ namespace af = scitbx::af;
 
         cudaSafeCall(cudaMalloc((void ** )&cu_mosaic_umats, sizeof(*cu_mosaic_umats) * cu_mosaic_domains * 9));
         cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_mosaic_umats, SIM.mosaic_umats, cu_mosaic_domains * 9));
+      nvtxRangePop();
   };
 
   exascale_api::~exascale_api(){
