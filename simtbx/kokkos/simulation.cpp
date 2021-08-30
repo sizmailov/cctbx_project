@@ -164,6 +164,7 @@ namespace Kokkos {
 
     // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
     // coordinates for the active pixel list are absolute offsets into the detector array
+    ::Kokkos::Profiling::pushRegion("Simulation - convert all_panel_mask");
     af::shared<int> active_pixel_list;
     const bool* jptr = all_panel_mask.begin();
     for (int j=0; j < all_panel_mask.size(); ++j) {
@@ -171,13 +172,18 @@ namespace Kokkos {
         active_pixel_list.push_back(j);
       }
     }
+    ::Kokkos::Profiling::popRegion();
+    ::Kokkos::Profiling::pushRegion("Simulation - set active_pixels on kokkos");
     kdt.set_active_pixels_on_KOKKOS(active_pixel_list);
+    ::Kokkos::Profiling::popRegion();
 
     // transfer source_I, source_lambda
     // the int arguments are for sizes of the arrays
     int source_count = SIM.sources;
+    ::Kokkos::Profiling::pushRegion("Simulation - transfer sources");
     transfer_double2kokkos(m_source_I, SIM.source_I, source_count);
     transfer_double2kokkos(m_source_lambda, SIM.source_lambda, source_count);
+    ::Kokkos::Profiling::popRegion();
 
     // magic happens here: take pointer from singleton, temporarily use it for add Bragg iteration:
     vector_cudareal_t current_channel_Fhkl = kec.d_channel_Fhkl[ichannel];

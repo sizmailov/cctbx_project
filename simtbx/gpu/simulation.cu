@@ -164,6 +164,7 @@ namespace af = scitbx::af;
         nvtxRangePush("Simulation - AddEnergyChannel");
         // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
         // coordinates for the active pixel list are absolute offsets into the detector array
+        nvtxRangePush("Simulation - convert all_panel_mask");
         af::shared<int> active_pixel_list;
         const bool* jptr = all_panel_mask.begin();
         for (int j=0; j < all_panel_mask.size(); ++j){
@@ -171,6 +172,7 @@ namespace af = scitbx::af;
             active_pixel_list.push_back(j);
           }
         }
+        nvtxRangePop();
         add_energy_channel_mask_allpanel_cuda(
           ichannel, gec, gdt, active_pixel_list);
         nvtxRangePop();
@@ -184,13 +186,16 @@ namespace af = scitbx::af;
     af::shared<int> const active_pixel_list
   ){
         cudaSafeCall(cudaSetDevice(SIM.device_Id));
-
+        nvtxRangePush("Simulation - set active_pixels on gpu");
         gdt.set_active_pixels_on_GPU(active_pixel_list);
+        nvtxRangePop();
 
         // transfer source_I, source_lambda
         // the int arguments are for sizes of the arrays
+        nvtxRangePush("Simulation - transfer sources");
         cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_I, SIM.source_I, SIM.sources));
         cudaSafeCall(cudaMemcpyVectorDoubleToDevice(cu_source_lambda, SIM.source_lambda, SIM.sources));
+        nvtxRangePop();
 
         // magic happens here: take pointer from singleton, temporarily use it for add Bragg iteration:
         cu_current_channel_Fhkl = gec.d_channel_Fhkl[ichannel];
