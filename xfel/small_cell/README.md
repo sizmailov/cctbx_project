@@ -1,7 +1,29 @@
-notes for readme file
+## Chemical crystallography using `cctbx.small_cell_process`
 
-Find spots to prepare for powder pattern
-With command.py containing:
+This page reproduces the structure determination of mithrene as described in [REF]. About 3.5TB of storage are required.
+The whole structure determination took about 3 hours on a 64-core (Opteron 6380) Linux server.
+
+### Installation of software
+
+DIALS/CCTBX and dependencies were installed as described in the "general build" section here:
+https://github.com/cctbx/cctbx_project/tree/master/xfel/conda_envs
+
+GSASII must also be installed in the conda environment. Instructions will be printed when
+calling `cctbx.xfel.candidate_cells` for the first time.
+
+### Availability of data
+
+The raw data collected at SACLA are available from CXIDB at the following location
+[AARON todo]. Runs 3133 through 3214 are sufficient to determine the structure. A carefully
+refined detector metrology file, `step2_refined2.expt`, is also provided.
+
+
+### Compute powder pattern from spotfinding results
+
+We will use the DIALS spotfinder on 9 selected runs with a lot of hits; this is enough spots to
+synthesize a high-quality powder pattern for indexing.
+
+With `run_spotfind.py` containing:
 
 ```
 import sys, os
@@ -15,7 +37,7 @@ os.mkdir (odir)
 os.system (cmd_ji)
 ```
 
-and spotfind.phil containing:
+and `spotfind.phil` containing:
 ```
 input.reference_geometry=/net/dials/raid1/elyseschriber/processing/protk/dan/step2/step2_refined2.expt
 dispatch.hit_finder {
@@ -29,27 +51,32 @@ spotfinder.filter.min_spot_size=3
 
 do:
 ```
-$ for n in {3192..3200}; do for nn in {0..2}; do python command.py $n $nn; done; done
+$ for n in {3192..3200}; do for nn in {0..2}; do python run_spotfind.py $n $nn; done; done
 ```
 
-Then combine experiments:
+Spotfinding will run on the 27 selected h5 files within a few minutes. Then prepare a single
+set of combined files:
 ```
 $ mkdir combined
 $ for d in 3*; do dials.combine_experiments $d/*imported.expt $d/*strong.refl output.experiments=combined/$d.expt output.reflections=combined/$d.refl reference_from_experiment.detector=0 & done
 $ cd combined; dials.combine_experiments *.expt *.refl reference_from_experiment.detector=0
 ```
 
-Make powder pattern:
+Plot the powder pattern:
 ```
-cctbx.xfel.powder_from_spots combined.* output.xy_file=powder.xy
-```
-
-Manually pick peaks and enter them in peaks.txt, then do:
-```
-cctbx.xfel.candidate_cells nproc=64 input.peak_list=peaks_new.txt input.powder_pattern=powder.xy search.timeout=300
+$ cctbx.xfel.powder_from_spots combined.* output.xy_file=powder.xy
 ```
 
-Take this indexing phil file and make 5 copies:
+This should display an interactive matplotlib window. Manually identify about 20 d-spacings. Record them
+with 3 decimal places accuracy in a new file `peaks.txt`. Then run GSASII powder
+indexing through the `candidate_cells` wrapper:
+```
+$ cctbx.xfel.candidate_cells nproc=64 input.peak_list=peaks.txt input.powder_pattern=powder.xy search.timeout=300
+```
+
+The correct cell should be in the top 5 candidates. We will index a single run with the candidate unit cells and crystal systems.
+
+Make 5 copies of the following indexing phil file, named `1.phil` through `5.phil`:
 
 ```
 input.reference_geometry=/net/dials/raid1/elyseschriber/processing/protk/dan/step2/step2_refined2.expt
@@ -95,9 +122,9 @@ small_cell {
 }
 ```
 
-Name the copies 1.phil through 5.phil. Manually enter the unit cells and space groups of the top 5 candidates from candidate_cells.
+Manually enter the unit cells and space groups of the top 5 candidates from candidate_cells.
 
-With run.py containing:
+With `run_index.py` containing:
 ```
 import sys, os
 phil_root = sys.argv[1]
@@ -112,9 +139,11 @@ os.system (cmd_ji)
 do
 
 ```
-$ for n in 1 2 3 4 5; do python run.py $n; done
+$ for n in 1 2 3 4 5; do python run_index.py $n; done
 ```
-and then
+
+then count the resulting indexing hits:
+
 ```
 $ for n in {1..5}; do echo;  echo $n; egrep 'powdercell|spacegroup' $n.phil;  grep real_space_a $n/*refined.expt 2>/dev/null|wc -l; done
 ```
@@ -161,12 +190,12 @@ small_cell {
   high_res_limit = 0.8
   min_spots_to_integrate = 3
   faked_mosaicity = 0.1
-  spot_connection_epsilon = 0.005
+  spot_connection_epsilon = 0.004
   d_ring_overlap_limit = None
 }
 ```
 
-And this script run.py:
+And this script run_integrate.py:
 ```
 import sys, os
 phil_root = sys.argv[1]
