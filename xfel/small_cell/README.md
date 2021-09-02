@@ -251,7 +251,11 @@ $ mpirun -n 32 cctbx.xfel.merge mark0.phil
 $ iotbx.reflection_file_converter mark0_all.mtz --label="Iobs,SIGIobs" --shelx=mark0.hkl
 ```
 
-At this point, the file mark0.hkl can be used for structure solution. To perform a final round of scaling with a partially completed reference structure (here combined with reindexing to resolve an indexing ambiguity), save the structure in standard cif format and do this:
+At this point, the file mark0.hkl can be used for structure solution. An ins file must be prepared by hand.
+
+To perform a final round of scaling with a partially completed reference structure
+(here combined with reindexing to resolve an indexing ambiguity), save the structure
+in standard cif format and do this:
 ```
 $ cat > rtr.phil
 input.path=../3*
@@ -270,3 +274,4 @@ $ mpirun -n 32 cctbx.xfel.merge rtr.phil
 $ iotbx.reflection_file_converter rtr_all.mtz --label="Iobs,SIGIobs" --shelx=rtr.hkl
 ```
 
+The resulting file `rtr.hkl` contains the final intensities for structure refinement.
