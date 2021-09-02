@@ -160,6 +160,8 @@ class several_wavelength_case:
   kokkos_detector.each_image_allocate_cuda()
 
   mask = flex.bool(1536*1536, True)
+  # Set active pixel
+  kokkos_simulation.set_active_pixels(kokkos_detector, mask)
 
   # loop over energies
   for x in range(len(self.flux)):
@@ -168,7 +170,7 @@ class several_wavelength_case:
       print("USE_EXASCALE_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
             x, SIM.wavelength_A, SIM.flux, SIM.fluence))
       kokkos_simulation.add_energy_channel_mask_allpanel_cuda(
-        x, kokkos_channels_singleton, kokkos_detector, mask)
+        x, kokkos_channels_singleton, kokkos_detector)
   per_image_scale_factor = 1.0
   kokkos_detector.scale_in_place_cuda(per_image_scale_factor) # apply scale directly in KOKKOS
   SIM.wavelength_A = self.BEAM.get_wavelength() # return to canonical energy for subsequent background

@@ -154,14 +154,8 @@ namespace Kokkos {
   }
 
   void
-  exascale_api::add_energy_channel_mask_allpanel_cuda(
-    int const& ichannel,
-    simtbx::Kokkos::kokkos_energy_channels & kec,
-    simtbx::Kokkos::kokkos_detector & kdt,
-    af::shared<bool> all_panel_mask
-  ) {
-    ::Kokkos::Profiling::pushRegion("Simulation - AddEnergyChannel");
-
+  exascale_api::set_active_pixels(simtbx::Kokkos::kokkos_detector & kdt,
+                                  af::shared<bool> all_panel_mask) {
     // here or there, need to convert the all_panel_mask (3D map) into a 1D list of accepted pixels
     // coordinates for the active pixel list are absolute offsets into the detector array
     ::Kokkos::Profiling::pushRegion("Simulation - convert all_panel_mask");
@@ -176,6 +170,16 @@ namespace Kokkos {
     ::Kokkos::Profiling::pushRegion("Simulation - set active_pixels on kokkos");
     kdt.set_active_pixels_on_KOKKOS(active_pixel_list);
     ::Kokkos::Profiling::popRegion();
+  }
+
+  void
+  exascale_api::add_energy_channel_mask_allpanel_cuda(
+    int const& ichannel,
+    simtbx::Kokkos::kokkos_energy_channels & kec,
+    simtbx::Kokkos::kokkos_detector & kdt
+  ) {
+    ::Kokkos::Profiling::pushRegion("Simulation - AddEnergyChannel");
+
 
     // transfer source_I, source_lambda
     // the int arguments are for sizes of the arrays
@@ -190,7 +194,7 @@ namespace Kokkos {
 
     // for call for all panels at the same time
     debranch_maskall_CUDAKernel(
-      kdt.m_panel_count, kdt.m_slow_dim_size, kdt.m_fast_dim_size, active_pixel_list.size(),
+      kdt.m_panel_count, kdt.m_slow_dim_size, kdt.m_fast_dim_size, kdt.m_active_pixel_size,
       SIM.oversample, SIM.point_pixel,
       SIM.pixel_size, m_subpixel_size, m_steps,
       SIM.detector_thickstep, SIM.detector_thicksteps,
