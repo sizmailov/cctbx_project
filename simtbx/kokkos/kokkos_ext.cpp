@@ -19,6 +19,8 @@ namespace simtbx { namespace Kokkos {
       class_<simtbx::Kokkos::kokkos_instance>("kokkos_instance",init<>() )
         .def(init< const int& >(( arg("deviceId"))))
         .def("get_deviceID", &simtbx::Kokkos::kokkos_instance::get_deviceID)
+        .def("pushRegion", &simtbx::Kokkos::kokkos_instance::pushRegion)
+        .def("popRegion", &simtbx::Kokkos::kokkos_instance::popRegion)
         .def("finalize_kokkos", &simtbx::Kokkos::kokkos_instance::finalize_kokkos)
         ;
     }
