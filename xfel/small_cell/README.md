@@ -1,7 +1,15 @@
 ## Chemical crystallography using `cctbx.small_cell_process`
 
-This page reproduces the structure determination of mithrene as described in [REF]. About 3.5TB of storage are required.
-The whole structure determination took about 3 hours on a 64-core (Opteron 6380) Linux server.
+This page reproduces the structure determination of mithrene from XFEL diffraction at SACLA.
+About 3.5TB of storage are required. The whole structure determination took about 3 hours
+on a 64-core (Opteron 6380) Linux server.
+
+### References
+
+The _small_cell_ indexing algorithm was described in Brewster, 2015:
+https://doi.org/10.1107/S1399004714026145 
+
+The experimental structure determination in this README is described in Schriber and Paley, 2021: [REF]
 
 ### Installation of software
 
@@ -289,6 +297,23 @@ $ iotbx.reflection_file_converter mark0_all.mtz --label="Iobs,SIGIobs" --shelx=m
 ```
 
 At this point, the file mark0.hkl can be used for structure solution. An ins file must be prepared by hand.
+The following would be suitable for mithrene in C2/c:
+
+```
+TITL mithrene
+CELL 1.032066 5.93762 7.32461 29.202 90 95.4404 90
+ZERR 8 0 0 0 0 0 0
+LATT 7
+SYMM -X,+Y,0.5-Z
+SFAC C H Se Ag
+DISP Ag -0.2289 2.1223 13899.9697
+DISP C 0.0087 0.0039 30.8059
+DISP H -0 0 0.6385
+DISP Se -2.5865 0.5775 2790.4387
+UNIT 80 72 8 8
+
+HKLF 4
+```
 
 To perform a final round of scaling with a partially completed reference structure
 (here combined with reindexing to resolve an indexing ambiguity), save the structure
