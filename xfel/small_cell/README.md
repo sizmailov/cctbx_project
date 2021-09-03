@@ -17,6 +17,13 @@ The raw data collected at SACLA are available from CXIDB at the following locati
 [AARON todo]. Runs 3133 through 3214 are sufficient to determine the structure. A carefully
 refined detector metrology file, `step2_refined2.expt`, is also provided.
 
+Extract the data and export an environment variable pointing to the path:
+
+```
+$ tar -xvzf *.tar.gz
+$ export SACLA_DATA=$PWD/data
+```
+
 
 ### Compute powder pattern from spotfinding results
 
@@ -29,17 +36,24 @@ With `run_spotfind.py` containing:
 import sys, os
 i = int(sys.argv[1])
 j = int(sys.argv[2])
-cmd="mpirun -n 64 cctbx.small_cell_process spotfind.phil /net/dials/raid1/elyseschriber/sacla2019/data/data/78%d-%d/run78%d-%d.h5 output.output_dir=%s mp.method=mpi"
-odir="%d-%d"%(i,j)
-cmd_ji= cmd %(i,j, i, j, odir)
-print (cmd_ji)
-os.mkdir (odir)
-os.system (cmd_ji)
+root_path = os.getenv('SACLA_DATA')
+data_path = os.path.join(root_path, 'data')
+geom_path = os.path.join(root_path, 'geom', 'step2_refined2.expt')
+h5_path = os.path.join(data_path, f'78{i}-{j}', f'run78{i}-{j}.h5')
+out_path = os.path.join(f'{i}-{j}', 'out')
+log_path = os.path.join(f'{i}-{j}', 'log')
+cmd = \
+  f"cctbx.small_cell_process spotfind.phil {h5_path} output.output_dir={out_path} \
+  output.logging_dir={log_path} input.reference_geometry={geom_path}"
+cmd_mpi = f"mpirun -n 64 {cmd} mp.method=mpi"
+print (cmd_mpi)
+os.mkdir(out_path)
+os.mkdir(log_path)
+os.system(cmd_ji)
 ```
 
 and `spotfind.phil` containing:
 ```
-input.reference_geometry=/net/dials/raid1/elyseschriber/processing/protk/dan/step2/step2_refined2.expt
 dispatch.hit_finder {
   minimum_number_of_reflections = 3
   maximum_number_of_reflections = 40
@@ -51,7 +65,7 @@ spotfinder.filter.min_spot_size=3
 
 do:
 ```
-$ for n in {3192..3200}; do for nn in {0..2}; do python run_spotfind.py $n $nn; done; done
+$ for i in {3192..3200}; do for j in {0..2}; do python run_spotfind.py $i $j; done; done
 ```
 
 Spotfinding will run on the 27 selected h5 files within a few minutes. Then prepare a single
@@ -76,10 +90,11 @@ $ cctbx.xfel.candidate_cells nproc=64 input.peak_list=peaks.txt input.powder_pat
 
 The correct cell should be in the top 5 candidates. We will index a single run with the candidate unit cells and crystal systems.
 
+### Trial indexing jobs
+
 Make 5 copies of the following indexing phil file, named `1.phil` through `5.phil`:
 
 ```
-input.reference_geometry=/net/dials/raid1/elyseschriber/processing/protk/dan/step2/step2_refined2.expt
 dispatch {
   hit_finder {
     minimum_number_of_reflections = 3
@@ -127,13 +142,22 @@ Manually enter the unit cells and space groups of the top 5 candidates from cand
 With `run_index.py` containing:
 ```
 import sys, os
-phil_root = sys.argv[1]
 i, j = 3192, 0
-cmd="mpirun -n 64 cctbx.small_cell_process %s.phil /net/dials/raid1/elyseschriber/sacla2019/data/data/78%d-%d/run78%d-%d.h5 output.output_dir=%s mp.method=mpi"
-cmd_ji= cmd %(phil_root, i,j, i, j, phil_root)
-print (cmd_ji)
-os.mkdir (phil_root)
-os.system (cmd_ji)
+phil_root = sys.argv[1]
+root_path = os.getenv('SACLA_DATA')
+data_path = os.path.join(root_path, 'data')
+geom_path = os.path.join(root_path, 'geom', 'step2_refined2.expt')
+h5_path = os.path.join(data_path, f'78{i}-{j}', f'run78{i}-{j}.h5')
+out_path = os.path.join(phil_root, 'out')
+log_path = os.path.join(phil_root, 'log')
+cmd = \
+  f"cctbx.small_cell_process spotfind.phil {h5_path} output.output_dir={out_path} \
+  output.logging_dir={log_path} input.reference_geometry={geom_path}"
+cmd_mpi = f"mpirun -n 64 {cmd} mp.method=mpi"
+print (cmd_mpi)
+os.mkdir(out_path)
+os.mkdir(log_path)
+os.system(cmd_ji)
 ```
 
 do
@@ -145,13 +169,18 @@ $ for n in 1 2 3 4 5; do python run_index.py $n; done
 then count the resulting indexing hits:
 
 ```
-$ for n in {1..5}; do echo;  echo $n; egrep 'powdercell|spacegroup' $n.phil;  grep real_space_a $n/*refined.expt 2>/dev/null|wc -l; done
+$ for n in {1..5}; do
+    echo
+    echo $n
+    egrep 'powdercell|spacegroup' $n.phil
+    grep real_space_a $n/out/*refined.expt 2>/dev/null|wc -l
+  done
 ```
 
+### Integration
 
 After choosing the correct cell, prepare this file integrate.phil:
 ```
-input.reference_geometry=/net/dials/raid1/elyseschriber/processing/protk/dan/step2/step2_refined2.expt
 dispatch {
   hit_finder {
     minimum_number_of_reflections = 3
@@ -198,23 +227,31 @@ small_cell {
 And this script run_integrate.py:
 ```
 import sys, os
-phil_root = sys.argv[1]
-i = int(sys.argv[2])
-j = int(sys.argv[3])
-output_dir = "{}-{}-{}".format(phil_root, i, j)
-logging_dir = output_dir + '/stdout'
-cmd = "mpirun -n 60 cctbx.small_cell_process {}.phil /net/dials/raid1/elyseschriber/sacla2019/data/data/78{}-{}/run78{}-{}.h5 output.output_dir={} output.logging_dir={} mp.method=mpi"
-cmd_ji = cmd.format(phil_root, i, j, i, j, output_dir, logging_dir)
-print (cmd_ji)
-os.mkdir (output_dir)
-os.mkdir(logging_dir)
-os.system (cmd_ji)
+i = int(sys.argv[1])
+j = int(sys.argv[2])
+root_path = os.getenv('SACLA_DATA')
+data_path = os.path.join(root_path, 'data')
+geom_path = os.path.join(root_path, 'geom', 'step2_refined2.expt')
+h5_path = os.path.join(data_path, f'78{i}-{j}', f'run78{i}-{j}.h5')
+out_path = os.path.join(f'{i}-{j}', 'out')
+log_path = os.path.join(f'{i}-{j}', 'log')
+cmd = \
+  f"cctbx.small_cell_process integrate.phil {h5_path} output.output_dir={out_path} \
+  output.logging_dir={log_path} input.reference_geometry={geom_path}"
+cmd_mpi = f"mpirun -n 64 {cmd} mp.method=mpi"
+print (cmd_mpi)
+os.mkdir(out_path)
+os.mkdir(log_path)
+os.system(cmd_ji)
 ```
-Prepare a todo script and run it: 
+Prepare a todo script and run it: [note 1]
 ```
 $ for m in {3133..3214}; do for n in {0..2}; do echo "python run.py integrate $m $n" >> todo.sh; done; done
 $ source todo.sh
 ```
+
+### Merging
+
 After integration, merging is performed in two steps:
 
 ```
@@ -275,3 +312,15 @@ $ iotbx.reflection_file_converter rtr_all.mtz --label="Iobs,SIGIobs" --shelx=rtr
 ```
 
 The resulting file `rtr.hkl` contains the final intensities for structure refinement.
+
+
+[Note 1]: To optimize disk access, running a few smaller parallel jobs may be faster.
+The utility GNU Parallel is available from conda_forge:
+```
+$ conda install parallel -c conda-forge
+```
+and the todo list can be piped into `parallel`:
+```
+$ cat todo.sh | parallel -j 4
+```
+to run 4 concurrent jobs (in which case you should modify the `mpirun` command to use 16 tasks apiece).
