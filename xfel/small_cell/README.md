@@ -338,6 +338,7 @@ $ iotbx.reflection_file_converter rtr_all.mtz --label="Iobs,SIGIobs" --shelx=rtr
 
 The resulting file `rtr.hkl` contains the final intensities for structure refinement.
 
+### Notes
 
 [Note 1]: To optimize disk access, running a few smaller parallel jobs may be faster.
 The utility GNU Parallel is available from conda_forge:
