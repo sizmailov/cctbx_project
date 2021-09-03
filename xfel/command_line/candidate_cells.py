@@ -18,9 +18,10 @@ here: https://github.com/cctbx/cctbx_project/tree/master/xfel/conda_envs
 
   $ conda install gsas2pkg -c briantoby -c conda-forge
   $ cd $DIALS/conda_base
-  $ echo $PWD/GSASII > lib/python3.7/site-packages/GSASII.pth
+  $ echo $PWD/GSASII > lib/python3.X/site-packages/GSASII.pth
 
-where DIALS is the base directory of the installation.
+where DIALS is the base directory of the installation and X is the Python minor
+version for your CCTBX installation.
 """
 
 try:
