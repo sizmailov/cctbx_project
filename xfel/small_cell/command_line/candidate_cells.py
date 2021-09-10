@@ -33,8 +33,8 @@ except ImportError:
 help_message = """
 Script to generate candidate unit cells from a list of measured d-spacings
 Example usage:
-cctbx.xfel.candidate_cells nproc=64 input.peak_list=../test_data/peak_list.txt \\
-  input.powder_pattern=../test_data/mith_max_unit.xy search.timeout=300
+cctbx.xfel.candidate_cells nproc=64 input.peak_list=mithrene_peaks.txt \\
+  input.powder_pattern=mithrene_powder.xy search.timeout=300
 
 This uses the SVD-Index powder indexing algorithm of Coelho
 (https://doi.org/10.1107/S0021889802019878) as implemented in GSAS-II (Toby and
@@ -42,6 +42,9 @@ Von Dreele, https://doi.org/10.1107/S0021889813003531) to generate possible unit
 cells. Candidates are ranked by their agreement with the peak list and, if
 available, a full powder pattern. These peaks and powder pattern may be prepared
 conveniently using cctbx.xfel.powder_from_spots.
+
+Test data are available in xfel_regression/small_cell_data. The command given
+above should run in 5 minutes on a 64-core machine.
 """
 
 
@@ -74,16 +77,10 @@ phil_scope = parse(
   }
 
   validate {
-    method = *gsasii powder
-      .type = choice
     d_min = 2
       .type = float
   }
 
-  unit_cell = None
-    .type = unit_cell
-  space_group = None
-    .type = space_group
   input {
     peak_list = None
       .type = str
