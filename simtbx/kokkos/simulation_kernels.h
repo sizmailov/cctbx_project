@@ -97,7 +97,7 @@ void debranch_maskall_CUDAKernel(int npanels, int spixels, int fpixels, int tota
     CUDAREAL max_I_x_sub_reduction = 0.0;
     CUDAREAL max_I_y_sub_reduction = 0.0;
     CUDAREAL polar = 0.0;
-    if (nopolar) { 
+    if (nopolar) {
       polar = 1.0;
     }
 
@@ -319,10 +319,10 @@ void add_background(int sources, int nanoBragg_oversample,
                                           //like oversampling pixels & multiple sources
   int source_start = 0;
   // allow user to override automated oversampling decision at call time with arguments
-  if (oversample<=0) { 
+  if (oversample<=0) {
     oversample = nanoBragg_oversample;
   }
-  if (oversample<=0) { 
+  if (oversample<=0) {
     oversample = 1;
   }
   if (override_source>=0) {
@@ -368,7 +368,7 @@ void add_background(int sources, int nanoBragg_oversample,
           // solid angle subtended by a pixel: (pix/airpath)^2*cos(2theta)
           CUDAREAL omega_pixel = pixel_size*pixel_size/airpath/airpath*close_distance/airpath;
           // option to turn off obliquity effect, inverse-square-law only
-          if (point_pixel) { 
+          if (point_pixel) {
             omega_pixel = 1.0 / airpath / airpath;
             }
 
@@ -427,7 +427,7 @@ void add_background(int sources, int nanoBragg_oversample,
 
             // allow negative F values to yield negative intensities
             CUDAREAL sign=1.0;
-            if (Fbg<0.0) { 
+            if (Fbg<0.0) {
               sign=-1.0;
             }
 

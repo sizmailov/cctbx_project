@@ -1,13 +1,18 @@
 """
-Extend the tests in tst_exafel_api to test KOKKOS vs CUDA
-Both test cases excercise a simple monolithic detector
-Test 1) standard C++ result CPU
-     2) CPU, but use the stable sort version of CPU background (FUTURE PLAN)
-     3) exafel api interface to GPU, fast evaluation on many energy channels, CPU background
-     4) exafel api interface to GPU, fast evaluation on many energy channels, GPU background
-     5) exafel api interface to KOKKOS, fast evaluation on many energy channels, KOKKOS background
-     6) exafel api interface to KOKKOS, with GAUSS_ARGCHK
+Test the Performance of CUDA vs KOKKOS implementation of 'debranch_all' and 'add_background' kernel
+
+How-to run
+----------
+
+- for more useful names of kokkos kernels: download and build kokkos-tools,
+  then run 'export KOKKOS_PROFILE_LIBRARY=[YOUR PATH]/kokkos-tools/kp_nvprof_connector.so'
+- to silence the warning about UMV, run 'export CUDA_LAUNCH_BLOCKING=1'
+- check that nsys is available
+
+- Profiling on Cori GPU: 
+  'srun -n 1 -N 1 -G 1 nsys profile --stats=true -t cuda,nvtx libtbx.python [...]/tst_kokkos_performance.py'
 """
+
 from __future__ import absolute_import, division, print_function
 from scitbx.array_family import flex
 from scitbx.matrix import sqr
@@ -18,7 +23,7 @@ from simtbx.nanoBragg.tst_gauss_argchk import water, basic_crystal, basic_beam, 
 class several_wavelength_case:
  def __init__(self, BEAM, DETECTOR, CRYSTAL, SF_model):
   SIM = nanoBragg(DETECTOR, BEAM, panel_id=0)
-  print("\nassume three energy channels")
+  #print("\nassume three energy channels")
   self.wavlen = flex.double([BEAM.get_wavelength()-0.002, BEAM.get_wavelength(), BEAM.get_wavelength()+0.002])
   self.flux = flex.double([(1./6.)*SIM.flux, (3./6.)*SIM.flux, (2./6.)*SIM.flux])
   self.sfall_channels = {}
@@ -27,14 +32,15 @@ class several_wavelength_case:
   self.DETECTOR = DETECTOR
   self.BEAM = BEAM
   self.CRYSTAL = CRYSTAL
+  self.mask = flex.bool(1536*1536, True)
 
  def several_wavelength_case_for_CPU(self):
   SIM = nanoBragg(self.DETECTOR, self.BEAM, panel_id=0)
   for x in range(len(self.wavlen)):
     SIM.flux = self.flux[x]
     SIM.wavelength_A = self.wavlen[x]
-    print("CPUnanoBragg_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
-            x, SIM.wavelength_A, SIM.flux, SIM.fluence))
+    # print("CPUnanoBragg_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
+    #         x, SIM.wavelength_A, SIM.flux, SIM.fluence))
     SIM.Fhkl = self.sfall_channels[x]
     SIM.Ncells_abc = (20,20,20)
     SIM.Amatrix = sqr(self.CRYSTAL.get_A()).transpose()
@@ -72,10 +78,10 @@ class several_wavelength_case:
   SIM.Amatrix = sqr(self.CRYSTAL.get_A()).transpose()
   SIM.oversample = 2
   if argchk:
-    print("\npolychromatic GPU argchk")
+    #print("\npolychromatic GPU argchk")
     SIM.xtal_shape = shapetype.Gauss_argchk
   else:
-    print("\npolychromatic GPU no argchk")
+    #print("\npolychromatic GPU no argchk")
     SIM.xtal_shape = shapetype.Gauss
   SIM.interpolate = 0
   # allocate GPU arrays
@@ -91,10 +97,10 @@ class several_wavelength_case:
   for x in range(len(self.flux)):
       SIM.flux = self.flux[x]
       SIM.wavelength_A = self.wavlen[x]
-      print("USE_EXASCALE_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
-            x, SIM.wavelength_A, SIM.flux, SIM.fluence))
-      gpu_simulation.add_energy_channel_from_gpu_amplitudes_cuda(
-        x, gpu_channels_singleton, gpu_detector)
+      # print("USE_EXASCALE_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
+      #       x, SIM.wavelength_A, SIM.flux, SIM.fluence))
+      gpu_simulation.add_energy_channel_mask_allpanel_cuda(
+        x, gpu_channels_singleton, gpu_detector, self.mask)
   per_image_scale_factor = 1.0
   gpu_detector.scale_in_place_cuda(per_image_scale_factor) # apply scale directly on GPU
   SIM.wavelength_A = self.BEAM.get_wavelength() # return to canonical energy for subsequent background
@@ -128,12 +134,18 @@ class several_wavelength_case:
       SIM.add_background()
   return SIM
 
- def modularized_exafel_api_for_KOKKOS(self, argchk=False, cuda_background=True):
+ def modularized_exafel_api_for_KOKKOS(self, argchk=False, cuda_background=True, profiler=None):
+  if profiler is not None:
+    profiler.pushRegion("Initialize")
   from simtbx.kokkos import kokkos_energy_channels
   kokkos_channels_singleton = kokkos_energy_channels()
 
+  if profiler is not None:
+    profiler.pushRegion("Before nanoBragg")
   SIM = nanoBragg(self.DETECTOR, self.BEAM, panel_id=0)
   SIM.device_Id = 0
+  if profiler is not None:
+    profiler.popRegion()
 
   assert kokkos_channels_singleton.get_nchannels() == 0 # uninitialized
   for x in range(len(self.flux)):
@@ -144,31 +156,38 @@ class several_wavelength_case:
   SIM.Amatrix = sqr(self.CRYSTAL.get_A()).transpose()
   SIM.oversample = 2
   if argchk:
-    print("\npolychromatic KOKKOS argchk")
+    #print("\npolychromatic KOKKOS argchk")
     SIM.xtal_shape = shapetype.Gauss_argchk
   else:
-    print("\npolychromatic KOKKOS no argchk")
+    #print("\npolychromatic KOKKOS no argchk")
     SIM.xtal_shape = shapetype.Gauss
   SIM.interpolate = 0
   # allocate GPU arrays
+  if profiler is not None:
+    profiler.pushRegion("Before Exascale API")
   from simtbx.kokkos import exascale_api
   kokkos_simulation = exascale_api(nanoBragg = SIM)
   kokkos_simulation.allocate_cuda()
+  if profiler is not None:
+    profiler.popRegion()
 
+  if profiler is not None:
+    profiler.pushRegion("Before Detector")
   from simtbx.kokkos import kokkos_detector as kokkosd
   kokkos_detector = kokkosd(detector=self.DETECTOR, beam=self.BEAM)
   kokkos_detector.each_image_allocate_cuda()
+  if profiler is not None:
+    profiler.popRegion()
 
-  mask = flex.bool(1536*1536, True)
   # Set active pixel
-  kokkos_simulation.set_active_pixels(kokkos_detector, mask)
+  kokkos_simulation.set_active_pixels(kokkos_detector, self.mask)
 
   # loop over energies
   for x in range(len(self.flux)):
       SIM.flux = self.flux[x]
       SIM.wavelength_A = self.wavlen[x]
-      print("USE_EXASCALE_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
-            x, SIM.wavelength_A, SIM.flux, SIM.fluence))
+      # print("USE_EXASCALE_API+++++++++++++ Wavelength %d=%.6f, Flux %.6e, Fluence %.6e"%(
+      #       x, SIM.wavelength_A, SIM.flux, SIM.fluence))
       kokkos_simulation.add_energy_channel_mask_allpanel_cuda(
         x, kokkos_channels_singleton, kokkos_detector)
   per_image_scale_factor = 1.0
@@ -222,34 +241,15 @@ if __name__=="__main__":
 
   print("\n# Use case 2.  Three-wavelength polychromatic source")
   SWC = several_wavelength_case(BEAM, DETECTOR, CRYSTAL, SF_model)
-  SIM = SWC.several_wavelength_case_for_CPU()
-  SIM.to_smv_format(fileout="test_full_e_002.img")
-  SIM.to_cbf("test_full_e_002.cbf")
-
-  print("\n# Use case: modularized api argchk=False, cuda_background=False")
-  SIM3 = SWC.modularized_exafel_api_for_GPU(argchk=False, cuda_background=False)
-  SIM3.to_smv_format(fileout="test_full_e_003.img")
-  SIM3.to_cbf("test_full_e_003.cbf")
-  diffs("CPU",SIM.raw_pixels, "GPU",SIM3.raw_pixels)
 
   print("\n# Use case: modularized api argchk=False, cuda_background=True")
   SIM4 = SWC.modularized_exafel_api_for_GPU(argchk=False, cuda_background=True)
-  SIM4.to_smv_format(fileout="test_full_e_004.img")
-  SIM4.to_cbf("test_full_e_004.cbf")
-  diffs("CPU",SIM.raw_pixels, "GPU",SIM4.raw_pixels)
 
   from simtbx.kokkos import kokkos_instance
   kokkos_run = kokkos_instance(deviceId = 0)
   print("\n# Use case: modularized api argchk=False, cuda_background=True")
-  SIM5 = SWC.modularized_exafel_api_for_KOKKOS(argchk=False, cuda_background=True)
-  SIM5.to_smv_format(fileout="test_full_e_005.img")
-  SIM5.to_cbf("test_full_e_005.cbf")
-  diffs("GPU",SIM4.raw_pixels, "KOKKOS",SIM5.raw_pixels)
-
-  print("\n# Use case: modularized api argchk=True, cuda_background=True")
-  SIM6 = SWC.modularized_exafel_api_for_KOKKOS(argchk=True, cuda_background=True)
-  SIM6.to_smv_format(fileout="test_full_e_006.img")
-  SIM6.to_cbf("test_full_e_006.cbf")
-  diffs("GPU",SIM4.raw_pixels, "KOKKOS",SIM6.raw_pixels)
+  kokkos_run.pushRegion("KoKKoS - Run")
+  SIM5 = SWC.modularized_exafel_api_for_KOKKOS(argchk=False, cuda_background=True, profiler=kokkos_run)
+  kokkos_run.popRegion()
 
 print("OK")

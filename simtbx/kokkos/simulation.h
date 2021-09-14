@@ -20,10 +20,13 @@ struct exascale_api {
     simtbx::Kokkos::kokkos_energy_channels &,
     simtbx::Kokkos::kokkos_detector &
   );
+
+  void set_active_pixels(simtbx::Kokkos::kokkos_detector &,
+    af::shared<bool>
+  );
   void add_energy_channel_mask_allpanel_cuda(int const&,
     simtbx::Kokkos::kokkos_energy_channels &,
-    simtbx::Kokkos::kokkos_detector &,
-    af::shared<bool>
+    simtbx::Kokkos::kokkos_detector &
   );
   void add_background_cuda(simtbx::Kokkos::kokkos_detector &);
   void allocate_cuda();

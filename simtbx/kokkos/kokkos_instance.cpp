@@ -26,6 +26,16 @@ namespace Kokkos {
   }
 
   void
+  kokkos_instance::pushRegion(const std::string name) {
+    ::Kokkos::Profiling::pushRegion(name);
+  }
+
+  void
+  kokkos_instance::popRegion() {
+    ::Kokkos::Profiling::popRegion();
+  }
+
+  void
   kokkos_instance::finalize_kokkos() {
     finalize();
     bFinalized = true;

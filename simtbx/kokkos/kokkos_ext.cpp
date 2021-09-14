@@ -19,6 +19,8 @@ namespace simtbx { namespace Kokkos {
       class_<simtbx::Kokkos::kokkos_instance>("kokkos_instance",init<>() )
         .def(init< const int& >(( arg("deviceId"))))
         .def("get_deviceID", &simtbx::Kokkos::kokkos_instance::get_deviceID)
+        .def("pushRegion", &simtbx::Kokkos::kokkos_instance::pushRegion)
+        .def("popRegion", &simtbx::Kokkos::kokkos_instance::popRegion)
         .def("finalize_kokkos", &simtbx::Kokkos::kokkos_instance::finalize_kokkos)
         ;
     }
@@ -86,9 +88,12 @@ namespace simtbx { namespace Kokkos {
         .def("add_energy_channel_from_kokkos_amplitudes_cuda",
              &simtbx::Kokkos::exascale_api::add_energy_channel_from_kokkos_amplitudes_cuda,
              "Point to Fhkl at a new energy channel on the GPU, and accumulate Bragg spot contributions to the detector's accumulator array")
+        .def("set_active_pixels",
+             &simtbx::Kokkos::exascale_api::set_active_pixels,
+             "Set all detector pixels with mask==True as active")
         .def("add_energy_channel_mask_allpanel_cuda",
              &simtbx::Kokkos::exascale_api::add_energy_channel_mask_allpanel_cuda,
-             "Point to Fhkl at a new energy channel on the GPU, and accumulate Bragg spots on mask==True pixels")
+             "Point to Fhkl at a new energy channel on the GPU, and accumulate Bragg spots on activated pixels")
         .def("add_background_cuda", &simtbx::Kokkos::exascale_api::add_background_cuda,
              "Add a background field directly on the GPU")
         .def("show",&simtbx::Kokkos::exascale_api::show)

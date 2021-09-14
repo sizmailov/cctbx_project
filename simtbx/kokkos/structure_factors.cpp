@@ -21,7 +21,7 @@ namespace simtbx { namespace Kokkos {
 
     if (d_channel_Fhkl.size()==1) { //first time through
       m_FhklParams = { h_range * k_range * l_range,
-                          h_min, h_max, h_range, 
+                          h_min, h_max, h_range,
                           k_min, k_max, k_range,
                           l_min, l_max, l_range };
     }

@@ -12,6 +12,9 @@ class kokkos_instance {
     kokkos_instance(int const&);
     ~kokkos_instance();
 
+    void pushRegion(const std::string);
+    void popRegion();
+
     void finalize_kokkos();
 
     int get_deviceID() const;
