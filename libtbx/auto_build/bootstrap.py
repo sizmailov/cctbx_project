@@ -730,9 +730,8 @@ class afitt_class(SourceModule):
 class cctbx_module(SourceModule):
   module = 'cctbx_project'
   anonymous = ['git',
-               'git@github.com:cctbx/cctbx_project.git',
-               'https://github.com/cctbx/cctbx_project.git',
-               'https://github.com/cctbx/cctbx_project/archive/master.zip']
+               '-b fix-scaling',
+               'https://github.com/sizmailov/cctbx_project/archive/refs/heads/fix-scaling.zip']
 
 class amber_adaptbx_module(SourceModule):
   module = 'amber_adaptbx'
